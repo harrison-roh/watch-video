@@ -9,6 +9,8 @@ Before running this application, you need to install some modules.
 	$npm install express
 	$npm install socket.io
 
+Put videos on `list` directory.
+
 Run 
 
 	$ nodejs app.js
