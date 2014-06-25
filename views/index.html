@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Streaming Server</title>
+
+	<script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+	<b>Video List</b> <br>
+	<div id="playListContainer">
+		<ul id="playList"></ul>
+	</div><br>
+
+	<video id="player" style="border: 1px solid green;" width="350" controls>
+		<p>Video isn't supported</p>
+	</video> <br>
+
+	<script type="text/javascript">
+			
+		var server = 'http://localhost:8888';
+		var socket = io.connect(server);
+
+		socket.on('sc_error', function(data)
+		{
+			alert(data.msg);
+		});
+
+		socket.on('sc_videoList', function(data)
+		{
+			var list = data.videoList;
+			var ul = document.getElementById('playList');
+
+			for (var i = 0; i < list.length; ++i)
+			{
+				var li = document.createElement('li');
+				li.appendChild(document.createTextNode(list[i]));
+				ul.appendChild(li);
+			}
+		});
+
+		socket.on('sc_playVideo', function(data)
+		{
+			var video = data.playVideo;
+
+			if (video != '')
+			{
+				var player = document.getElementById('player');
+				player.src = video;
+				player.type = 'video/' + video.split('.')[1];
+				player.load();
+			}
+		});
+
+		document.getElementById('playList').onclick = function(event)
+		{
+			var e = event || window.event
+			var whichOne = e.target || e.srcElement;
+			socket.emit('cs_selectVideo', {videoName: whichOne.innerHTML});
+		}
+	</script>
+</body>
+</html>
