@@ -7,7 +7,6 @@ var express = require('express'),
 	port = 8888; // Change yourself
 
 var debug = true; // Change yourself
-var visitors = [];
 
 if (debug)
 {
@@ -26,22 +25,18 @@ app.get('/', function(req, res)
 
 io.on('connection', function(socket)
 {
-	sendVideoList(socket);
-
-	socket.on('disconnect', function(data)
+	socket.on('cs_updateVideo', function(data)
 	{
-		// delete user's video list
-		if (visitors[socket.id] != undefined)
-		{
-			log('Delete user: ' + socket.id);
-			delete visitors[socket.id];
-		}
+		var range = data.updateRange; // not yet used
+
+		log('Request: Update list ' + range + ' @' + socket.id);
+		updateVideoList(socket, range);
 	});
 
 	socket.on('cs_selectVideo', function(data)
 	{
-		log('Request: ' + data.videoName + ' from ' + socket.id);
-		sendVideo(socket, data.videoName);
+		log('Request: `' + data.videoName + '` @' + socket.id);
+		playVideo(socket, data.videoName);
 	});
 });
 
@@ -51,45 +46,38 @@ function log(msg)
 	{
 		console.log('+ ' + msg);
 	}
-}
-
+} 
 function sendError(socket, msg)
 {
 	socket.emit('sc_error', {msg: msg});
 }
 
-function sendVideo(socket, videoName)
+function playVideo(socket, videoName)
 {
-	var list = visitors[socket.id];
+	var filePath = path.join(__dirname, '/list', videoName);
 
-	if (list[videoName])
+	fs.stat(filePath, function(err, stats)
 	{
-		log('Send: `' + videoName + '` to ' + socket.id);
-		socket.emit('sc_playVideo', {playVideo: videoName});
-	}
-	else
-	{
-		log('Error occurred: ' + socket.id);
-		sendError(socket, 'Cannot find `' + videoName + '`!');
-	}
+		if (err)
+		{
+			log('Error occurred: @' + socket.id);
+			sendError(socket, 'Server internal error occurred!');
+		}
+
+		if (stats.isFile())
+		{
+			log('Play: `' + videoName + '` @' + socket.id);
+			socket.emit('sc_playVideo', {playVideo: videoName});
+		}
+		else
+		{
+			log('Error occurred: @' + socket.id);
+			sendError(socket, 'Cannot find `' + videoName + '`!');
+		}
+	});
 }
 
-function updateVideoList(socket, videoList)
-{
-	// delete old video list
-	if (visitors[socket.id] != undefined)
-	{
-		delete visitors[socket.id];
-	}
-
-	// store video list
-	visitors[socket.id] = videoList;
-
-	socket.emit('sc_videoList', {videoList: Object.keys(videoList)});
-}
-
-function sendVideoList(socket)
-{
+function updateVideoList(socket, range) {
 	var list = [];
 
 	// get files in `list` directory
@@ -101,7 +89,7 @@ function sendVideoList(socket)
 
 		files.forEach(function(file)
 		{
-			var filePath = path.join(__dirname, '/list/', file);
+			var filePath = path.join(__dirname, '/list', file);
 
 			fs.stat(filePath, function(err, stats)
 			{
@@ -118,7 +106,7 @@ function sendVideoList(socket)
 				if (!isRemain)
 				{
 					// if get all list, send the list to client
-					updateVideoList(socket, list);
+					socket.emit('sc_videoList', {videoList: Object.keys(list)});
 				}
 			});
 		});

@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Streaming Server</title>
+	<title>Play Video</title>
 
 	<script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
-	<b>Video List</b> <br>
+	<b>Video List</b>
+	<input type="button" id="refreshBtn" OnClick="refreshVideoList();" value="Refresh"/> <br>
 	<div id="playListContainer">
 		<ul id="playList"></ul>
-	</div><br>
+	</div> <br>
 
 	<video id="player" style="border: 1px solid green;" width="350" controls>
 		<p>Video isn't supported</p>
 	</video> <br>
 
 	<script type="text/javascript">
-			
 		var server = 'http://localhost:8888';
 		var socket = io.connect(server);
+		refreshVideoList();
 
 		socket.on('sc_error', function(data)
 		{
@@ -57,6 +58,21 @@
 			var e = event || window.event
 			var whichOne = e.target || e.srcElement;
 			socket.emit('cs_selectVideo', {videoName: whichOne.innerHTML});
+		}
+
+		function refreshVideoList()
+		{
+			var ul = document.getElementById('playList');
+
+			if (ul)
+			{
+				while (ul.firstChild)
+				{
+					ul.removeChild(ul.firstChild);
+				}
+			}
+
+			socket.emit('cs_updateVideo', {updateRange: 'all'});
 		}
 	</script>
 </body>
