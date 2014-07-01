@@ -4,6 +4,7 @@ var express = require('express'),
 	io = require('socket.io').listen(server),
 	path = require('path'),
 	fs = require('fs'),
+	async = require('async'),
 	port = 8888; // Change yourself
 
 var debug = true; // Change yourself
@@ -47,6 +48,7 @@ function log(msg)
 		console.log('+ ' + msg);
 	}
 } 
+
 function sendError(socket, msg)
 {
 	socket.emit('sc_error', {msg: msg});
@@ -60,8 +62,10 @@ function playVideo(socket, videoName)
 	{
 		if (err)
 		{
-			log('Error occurred: @' + socket.id);
-			sendError(socket, 'Server internal error occurred!');
+			log('Error occurred: @' + socket.id + '-> ' + err);
+			sendError(socket, 'Cannot find `' + videoName + '`!');
+
+			return;
 		}
 
 		if (stats.isFile())
@@ -72,43 +76,54 @@ function playVideo(socket, videoName)
 		else
 		{
 			log('Error occurred: @' + socket.id);
-			sendError(socket, 'Cannot find `' + videoName + '`!');
+			sendError(socket, 'Server internal error occurred!');
 		}
 	});
 }
 
-function updateVideoList(socket, range) {
+function updateVideoList(socket, range)
+{
 	var list = [];
 
 	// get files in `list` directory
 	fs.readdir(path.join(__dirname, '/list'), function(err, files)
 	{
-		if (err) { throw err; }
-
-		var isRemain = files.length;
-
-		files.forEach(function(file)
+		if (err)
 		{
-			var filePath = path.join(__dirname, '/list', file);
+			log('Error occurred: @' + socket.id + '-> ' + err);
+			sendError(socket, 'Server internal error occurred!');
 
-			fs.stat(filePath, function(err, stats)
+			return;
+		}
+
+		async.each(files, function (file, callback)
+		{
+			var filePath = path.join(__dirname, '/list', file)
+		
+			fs.stat(filePath, function (err, stats)
 			{
-				if (err) { throw err; }
-
+				if (err) { callback(err); }
+		
 				if (stats.isFile())
 				{
 					// store video file
 					list[file] = true; // What content do?
 				}
-
-				--isRemain;
-
-				if (!isRemain)
-				{
-					// if get all list, send the list to client
-					socket.emit('sc_videoList', {videoList: Object.keys(list)});
-				}
+		
+				callback(null);
 			});
+		}, function (err)
+		{
+			if (err)
+			{
+				log('Error occurred: @' + socket.id + '-> ' + err);
+				sendError(socket, 'Internal server error occurred!');
+			}
+			else
+			{
+				// if get all list, send the list to client
+				socket.emit('sc_videoList', {videoList: Object.keys(list)});
+			}
 		});
 	});
 }
