@@ -1,5 +1,5 @@
 watch-video
-===
+===========
 
 A video server using nodejs and HTML5.
 
@@ -8,8 +8,9 @@ Before running this application, you need to install some modules.
 
 	$npm install express
 	$npm install socket.io
+	$npm install async
 
-Put videos on `list` directory.
+Create `list` directory, and put videos on `list` directory.
 
 Run 
 
