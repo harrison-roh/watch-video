@@ -47,9 +47,19 @@
 			if (video != '')
 			{
 				var player = document.getElementById('player');
-				player.src = video;
 				player.type = 'video/' + video.split('.')[1];
-				player.load();
+
+				var result = canPlay(player, player.type);
+
+				if (result === true)
+				{
+					player.src = video;
+					player.load();
+				}
+				else
+				{
+					alert('This video is not supported');
+				}
 			}
 		});
 
@@ -73,6 +83,21 @@
 			}
 
 			socket.emit('cs_updateVideo', {updateRange: 'all'});
+		}
+
+		function canPlay(player, type)
+		{
+			if (player.canPlayType)
+			{
+				var playMsg = player.canPlayType(type);
+				
+				if ("" !== playMsg)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 	</script>
 </body>
